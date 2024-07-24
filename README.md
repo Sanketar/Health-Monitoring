@@ -15,3 +15,8 @@ The system_health_monitor.sh script monitors various system metrics on a Linux s
 ## Usage
 1. Adjust thresholds for CPU, memory, and disk usage as needed within the script.
 2. Run the script using ./system_health_monitor.sh to initiate system health monitoring.
+
+
+```
+./system_health_monitor.sh
+```
