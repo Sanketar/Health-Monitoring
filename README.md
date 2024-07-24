@@ -20,3 +20,21 @@ The system_health_monitor.sh script monitors various system metrics on a Linux s
 ```
 ./system_health_monitor.sh
 ```
+
+## Application Health Checker Script (application_health_checker.sh)
+
+## Overview
+The application_health_checker.sh script checks the status of a specified application:
+
+* Sends an HTTP request to the application URL.
+* Retrieves the HTTP status code to determine if the application is running (UP) or down (DOWN).
+* Logs the application status with timestamps.
+
+## Usage
+1. Replace "http://example.com" with your actual application URL in the script.
+2. Execute the script using ./application_health_checker.sh to check the application status.
+
+```
+./application_health_checker.sh
+```
+
