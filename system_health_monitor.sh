@@ -1,63 +1,47 @@
 #!/bin/bash
 
-# Function to check CPU usage
-check_cpu_usage() {
-    local threshold=$1
-    local cpu_usage=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
-    if [ $(echo "$cpu_usage > $threshold" | bc) -eq 1 ]; then
-        log_alert "CPU usage is $cpu_usage% which exceeds $threshold% threshold."
+CPU_THRESHOLD=80
+MEMORY_THRESHOLD=80
+DISK_THRESHOLD=80
+LOG_FILE="system_health.log"
+
+log_message() {
+    echo "$(date +'%Y-%m-%d %H:%M:%S') $1" | tee -a $LOG_FILE
+}
+
+check_cpu() {
+    CPU_USAGE=$(top -bn1 | grep "Cpu(s)" | awk '{print $2 + $4}')
+    if (( $(echo "$CPU_USAGE > $CPU_THRESHOLD" | bc -l) )); then
+        log_message "High CPU usage detected: $CPU_USAGE%"
     fi
+    echo "CPU Usage: $CPU_USAGE%"
 }
 
-# Function to check memory usage
-check_memory_usage() {
-    local threshold=$1
-    local memory_usage=$(free | awk '/Mem/{printf "%.2f", $3/$2 * 100}')
-    if [ $(echo "$memory_usage > $threshold" | bc) -eq 1 ]; then
-        log_alert "Memory usage is $memory_usage% which exceeds $threshold% threshold."
+check_memory() {
+    MEMORY_USAGE=$(free | grep Mem | awk '{print $3/$2 * 100.0}')
+    if (( $(echo "$MEMORY_USAGE > $MEMORY_THRESHOLD" | bc -l) )); then
+        log_message "High memory usage detected: $MEMORY_USAGE%"
     fi
+    echo "Memory Usage: $MEMORY_USAGE%"
 }
 
-# Function to check disk usage
-check_disk_usage() {
-    local threshold=$1
-    local partitions=$(df -H | grep -vE '^Filesystem|tmpfs|cdrom' | awk '{print $5 " " $6}')
-    while read -r partition; do
-        local usage=$(echo "$partition" | awk '{print $1}' | sed 's/%//')
-        local mount_point=$(echo "$partition" | awk '{print $2}')
-        if [ $usage -gt $threshold ]; then
-            log_alert "Disk $mount_point usage is $usage% which exceeds $threshold% threshold."
-        fi
-    done <<< "$partitions"
-}
-
-# Function to check running processes
-check_running_processes() {
-    local threshold=100  # Adjust as needed
-    local process_count=$(ps aux | wc -l)
-    if [ $process_count -gt $threshold ]; then
-        log_alert "Number of running processes is $process_count which exceeds $threshold."
+check_disk() {
+    DISK_USAGE=$(df / | grep / | awk '{ print $5}' | sed 's/%//g')
+    if [ $DISK_USAGE -gt $DISK_THRESHOLD ]; then
+        log_message "High disk usage detected: $DISK_USAGE%"
     fi
+    echo "Disk Usage: $DISK_USAGE%"
 }
 
-# Function to log alerts to console or file
-log_alert() {
-    local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-    echo "$timestamp - ALERT: $1"
-    # You can log to a file here if needed
+check_processes() {
+    ps aux --sort=-%cpu | awk 'NR<=10{print $0}' | tee -a $LOG_FILE
 }
 
-# Main function to run health checks
 main() {
-    local cpu_threshold=80  # CPU threshold percentage
-    local memory_threshold=80  # Memory threshold percentage
-    local disk_threshold=80  # Disk usage threshold percentage
-
-    check_cpu_usage "$cpu_threshold"
-    check_memory_usage "$memory_threshold"
-    check_disk_usage "$disk_threshold"
-    check_running_processes
+    check_cpu
+    check_memory
+    check_disk
+    check_processes
 }
 
-# Run the main function
 main
